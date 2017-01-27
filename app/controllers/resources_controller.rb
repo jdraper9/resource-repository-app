@@ -3,18 +3,18 @@ class ResourcesController < ApplicationController
   include SessionsHelper
 
   def index
-    # @resources = Resource.all
-    @resources = Resource.joins("LEFT JOIN favorites ON resources.id = favorites.resource_id").group("resources.id").order("count(favorites.resource_id) desc")
+    if current_user.role == 'teacher'
+      @resources = Resource.joins("LEFT JOIN favorites ON resources.id = favorites.resource_id").group("resources.id").order("count(favorites.resource_id) desc")
+    else
+      @resources = Resource.joins("LEFT JOIN favorites ON resources.id = favorites.resource_id").group("resources.id").order("count(favorites.resource_id) desc").to_a.reject do |resource| 
+        resource.tags.select{|tag| tag.name == 'teacher only'}.length > 0
+      end
+    end
   end
 
   def create
     @resource = Resource.new(resource_params)
     @resource.creator_id = current_user.id
-
-
-    # Tag.all.each do
-    #   @tag = Tag.new(parsed_tag_field)
-    # @resource.tags
 
     respond_to do |format|
      if @resource.save
