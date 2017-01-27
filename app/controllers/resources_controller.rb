@@ -3,11 +3,10 @@ class ResourcesController < ApplicationController
   include SessionsHelper
 
   def index
-    # @resources = Resource.joins(:favorites).group("resources.id").order("count(favorites.resource_id) desc")
     if current_user.role == 'teacher'
-      @resources = Resource.all
+      @resources = Resource.joins("LEFT JOIN favorites ON resources.id = favorites.resource_id").group("resources.id").order("count(favorites.resource_id) desc")
     else
-      @resources = Resource.all.to_a.reject do |resource| 
+      @resources = Resource.joins("LEFT JOIN favorites ON resources.id = favorites.resource_id").group("resources.id").order("count(favorites.resource_id) desc").to_a.reject do |resource| 
         resource.tags.select{|tag| tag.name == 'teacher only'}.length > 0
       end
     end
@@ -16,11 +15,6 @@ class ResourcesController < ApplicationController
   def create
     @resource = Resource.new(resource_params)
     @resource.creator_id = current_user.id
-
-
-    # Tag.all.each do
-    #   @tag = Tag.new(parsed_tag_field)
-    # @resource.tags
 
     respond_to do |format|
      if @resource.save
@@ -32,7 +26,7 @@ class ResourcesController < ApplicationController
             input_tag.strip!
             # create tag if not found in database
             Tag.create(name: input_tag) if !Tag.find_by(name: input_tag)
-      
+
             #create resource_tag object in db for every tag associated with resource
             tag_obj = Tag.find_by(name: input_tag)
             ResourceTag.create(resource_id: @resource.id, tag_id: tag_obj.id) if !ResourceTag.find_by(resource_id: @resource.id, tag_id: tag_obj.id)
